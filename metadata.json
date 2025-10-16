@@ -1,0 +1,5 @@
+{
+  "name": "Burmese-Thai Baht Exchange Rate Parser",
+  "description": "An application to parse currency exchange rate text messages using Gemini, display current rates, calculate conversions, and view historical data.",
+  "requestFramePermissions": []
+}
