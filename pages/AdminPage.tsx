@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrencyRates } from '../hooks/useCurrencyRates';
 import { parseExchangeText } from '../services/geminiService';
+import { Modal } from '../components/Modal';
+import { sendAdminTelegram } from '../services/telegramService';
 
 const sampleText = `16-Oct-2025
 
@@ -23,9 +25,18 @@ Buying (အဝယ်) 820
 အိမ်းလွှဲများအတွက်Kpay/Wave/Bank အကောင့်အစုံ/မှတ်ပုံတင်ထုတ်/Wave passwordထုတ်အကုန်ရပါတယ်`;
 
 export const AdminPage: React.FC = () => {
-  const [text, setText] = useState(sampleText);
+  const [lastMessage, setLastMessage] = useState<string>(() => {
+    try { return localStorage.getItem('lastExchangeMessage') || ''; } catch { return ''; }
+  });
+  const [text, setText] = useState<string>('');
+  const [authorized, setAuthorized] = useState<boolean>(() => {
+    try { return localStorage.getItem('currex_admin_ok') === '1'; } catch { return false; }
+  });
+  const [keyInput, setKeyInput] = useState('');
+  const [keyError, setKeyError] = useState<string | null>(null);
   const { updateRates, isLoading, error, setError, setIsLoading } = useCurrencyRates();
   const navigate = useNavigate();
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,14 +51,58 @@ export const AdminPage: React.FC = () => {
     try {
       const parsedData = await parseExchangeText(text);
       updateRates(parsedData);
-      alert('Rates updated successfully!');
-      navigate('/');
+      try { localStorage.setItem('lastExchangeMessage', text); } catch {}
+      setLastMessage(text);
+      // Best-effort Telegram notification (skip silently if not configured)
+      const date = parsedData.date || new Date().toISOString().slice(0,10);
+      const pm = parsedData.paymentMethod || 'Unknown';
+      const sellBelow = parsedData.sellingRates?.below1M_MMK ?? '-';
+      const sellAbove = parsedData.sellingRates?.above1M_MMK ?? '-';
+      const buyBase = parsedData.buyingRates?.base ?? '-';
+      const buyAbove = parsedData.buyingRates?.above1M_MMK ?? '-';
+      const special = parsedData.sellingRates?.special_100_500 ? `\nSpecial (100-500k+): ${parsedData.sellingRates.special_100_500}` : '';
+      const msg = `CURR EX Rates Updated\nDate: ${date}\nMethod: ${pm}\nSell <1M: ${sellBelow}\nSell >1M: ${sellAbove}\nBuy base: ${buyBase}\nBuy >1M: ${buyAbove}${special}`;
+      sendAdminTelegram(msg).catch(() => {});
+      setShowSuccess(true);
     } catch (err: any) {
       setError(err.message || "An unknown error occurred.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keyInput === 'soehtetlinn1996$') {
+      try { localStorage.setItem('currex_admin_ok', '1'); } catch {}
+      setAuthorized(true);
+      setKeyError(null);
+    } else {
+      setKeyError('Invalid key');
+    }
+  };
+
+  if (!authorized) {
+    return (
+      <div className="max-w-md mx-auto bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
+        <h1 className="text-2xl font-bold mb-4 text-brand-accent">Admin Access</h1>
+        <form onSubmit={handleKeySubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm mb-1 text-brand-text-secondary">Enter access key</label>
+            <input
+              type="password"
+              value={keyInput}
+              onChange={(e)=>setKeyInput(e.target.value)}
+              className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              placeholder="Access key"
+            />
+          </div>
+          {keyError && <div className="text-sm text-red-300">{keyError}</div>}
+          <button type="submit" className="w-full bg-brand-accent text-slate-900 font-semibold py-3 rounded-xl hover:bg-brand-accent-hover transition">Continue</button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
@@ -61,7 +116,7 @@ export const AdminPage: React.FC = () => {
             onChange={(e) => setText(e.target.value)}
             rows={15}
             className="w-full p-4 bg-brand-primary border-2 border-brand-border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent font-mono text-base transition"
-            placeholder="Paste exchange rate message here..."
+            placeholder={lastMessage || "Paste exchange rate message here..."}
           />
         </div>
 
@@ -89,6 +144,13 @@ export const AdminPage: React.FC = () => {
           )}
         </button>
       </form>
+      <Modal
+        title="Success"
+        isOpen={showSuccess}
+        onClose={() => { setShowSuccess(false); navigate('/'); }}
+      >
+        Rates updated successfully!
+      </Modal>
     </div>
   );
 };

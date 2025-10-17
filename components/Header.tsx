@@ -10,8 +10,18 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-50 bg-brand-surface backdrop-blur-lg border-b border-brand-border">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          <div className="flex items-center">
-            <span className="font-bold text-2xl text-brand-accent tracking-wider">CURREX</span>
+          <div className="flex items-center gap-3">
+            <img
+              src="logo.png"
+              alt="CURREX Logo"
+              className="h-12 w-12 rounded-full border border-brand-border object-contain bg-black/30"
+              loading="eager"
+              decoding="async"
+            />
+            <div className="leading-tight hidden md:block">
+              <div className="font-extrabold text-2xl tracking-wider">CURREX</div>
+              <div className="text-xs text-brand-text-secondary">MMK ✦ THB Exchange</div>
+            </div>
           </div>
           <div className="flex items-center space-x-2 md:space-x-4">
             <NavLink 

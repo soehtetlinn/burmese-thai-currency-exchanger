@@ -5,6 +5,7 @@ import { HomePage } from './pages/HomePage';
 import { AdminPage } from './pages/AdminPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { CurrencyRatesProvider } from './hooks/useCurrencyRates';
+import { WebChatWidget } from './components/WebChatWidget';
 
 const App: React.FC = () => {
   return (
@@ -19,6 +20,7 @@ const App: React.FC = () => {
               <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </main>
+          <WebChatWidget />
         </div>
       </HashRouter>
     </CurrencyRatesProvider>
