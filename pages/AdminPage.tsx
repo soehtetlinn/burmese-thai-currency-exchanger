@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrencyRates } from '../hooks/useCurrencyRates';
 import { parseExchangeText } from '../services/geminiService';
+import { saveRateToBackend } from '../services/apiService';
 import { Modal } from '../components/Modal';
 import { sendAdminTelegram } from '../services/telegramService';
 
@@ -50,9 +51,26 @@ export const AdminPage: React.FC = () => {
 
     try {
       const parsedData = await parseExchangeText(text);
+      
+      // Save to backend first - this is CRITICAL
+      console.log('[Admin] Attempting to save to backend...');
+      const backendSaved = await saveRateToBackend(parsedData);
+      
+      if (!backendSaved) {
+        // Show clear error if backend save fails
+        setError("⚠️ Failed to save to backend database. The rate was saved locally only and will disappear on refresh. Please try again!");
+        setIsLoading(false);
+        return; // Don't proceed if backend save fails
+      }
+      
+      console.log('[Admin] Backend save successful!');
+      
+      // Update local state (this also saves to localStorage)
       updateRates(parsedData);
+      
       try { localStorage.setItem('lastExchangeMessage', text); } catch {}
       setLastMessage(text);
+      
       // Best-effort Telegram notification (skip silently if not configured)
       const date = parsedData.date || new Date().toISOString().slice(0,10);
       const pm = parsedData.paymentMethod || 'Unknown';
@@ -63,7 +81,9 @@ export const AdminPage: React.FC = () => {
       const special = parsedData.sellingRates?.special_100_500 ? `\nSpecial (100-500k+): ${parsedData.sellingRates.special_100_500}` : '';
       const msg = `CURR EX Rates Updated\nDate: ${date}\nMethod: ${pm}\nSell <1M: ${sellBelow}\nSell >1M: ${sellAbove}\nBuy base: ${buyBase}\nBuy >1M: ${buyAbove}${special}`;
       sendAdminTelegram(msg).catch(() => {});
+      
       setShowSuccess(true);
+      setText(''); // Clear the textarea after successful submission
     } catch (err: any) {
       setError(err.message || "An unknown error occurred.");
     } finally {

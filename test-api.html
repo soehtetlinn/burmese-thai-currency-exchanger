@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Exchange API Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #00ffff; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:hover { background: #00ffff; }
+        .result {
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .error { border-color: #ff0000; color: #ff6666; }
+        .success { border-color: #00ff00; color: #00ff00; }
+        .info { border-color: #ffff00; color: #ffff00; }
+        .label { color: #00ffff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Currency Exchange API Test Page</h1>
+    
+    <div>
+        <button onclick="testHealth()">1. Test Health</button>
+        <button onclick="testLatestRate()">2. Test Latest Rate</button>
+        <button onclick="testHistory()">3. Test History</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'https://www.shltechent.com/api';
+        const ADMIN_KEY = 'currex-admin-123';
+
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<span class="label">[${timestamp}]</span> ${message}`;
+            resultsDiv.insertBefore(div, resultsDiv.firstChild);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testHealth() {
+            try {
+                log('Testing health endpoint...', 'info');
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    log('✓ Health check PASSED\n' + JSON.stringify(data, null, 2), 'success');
+                } else {
+                    log('✗ Health check FAILED\n' + JSON.stringify(data, null, 2), 'error');
+                }
+            } catch (error) {
+                log('✗ Health check ERROR: ' + error.message, 'error');
+            }
+        }
+
+        async function testLatestRate() {
+            try {
+                log('Fetching latest rate from: ' + `${API_BASE}/fx/latest`, 'info');
+                const response = await fetch(`${API_BASE}/fx/latest`);
+                
+                log('Response status: ' + response.status, 'info');
+                
+                if (!response.ok) {
+                    const text = await response.text();
+                    log('✗ Latest rate FAILED\nStatus: ' + response.status + '\nResponse: ' + text, 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                log('✓ Latest rate SUCCESS\n' + JSON.stringify(data, null, 2), 'success');
+                
+                // Show converted data
+                log('Converted data:\n' +
+                    `ID: ${data.id}\n` +
+                    `Buy Rate: ${data.buyRate}\n` +
+                    `Sell Rate: ${data.sellRate}\n` +
+                    `Buy Below 1M: ${data.buyBelow1mPer100k}\n` +
+                    `Buy Above 1M: ${data.buyAbove1mPer100k}\n` +
+                    `Sell Below 1M: ${data.sellBelow1mPer100k}\n` +
+                    `Sell Above 1M: ${data.sellAbove1mPer100k}\n` +
+                    `Special: ${data.sellSpecial100to500}\n` +
+                    `Payment Method: ${data.paymentMethod}\n` +
+                    `Date: ${data.dateText}`, 'info');
+                
+            } catch (error) {
+                log('✗ Latest rate ERROR: ' + error.message, 'error');
+            }
+        }
+
+        async function testHistory() {
+            try {
+                log('Fetching history from: ' + `${API_BASE}/admin/fx`, 'info');
+                const response = await fetch(`${API_BASE}/admin/fx`, {
+                    headers: {
+                        'x-currex-admin-key': ADMIN_KEY
+                    }
+                });
+                
+                log('Response status: ' + response.status, 'info');
+                
+                if (!response.ok) {
+                    const text = await response.text();
+                    log('✗ History FAILED\nStatus: ' + response.status + '\nResponse: ' + text, 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                log(`✓ History SUCCESS (${data.length} rates)\n` + JSON.stringify(data, null, 2).substring(0, 500) + '...', 'success');
+                
+            } catch (error) {
+                log('✗ History ERROR: ' + error.message, 'error');
+            }
+        }
+
+        // Auto-run tests on load
+        window.onload = function() {
+            log('=== AUTO-RUNNING TESTS ===', 'info');
+            setTimeout(() => testHealth(), 500);
+            setTimeout(() => testLatestRate(), 1500);
+            setTimeout(() => testHistory(), 2500);
+        };
+    </script>
+</body>
+</html>
+
