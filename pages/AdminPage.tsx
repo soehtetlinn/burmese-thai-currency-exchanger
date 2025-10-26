@@ -1,48 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrencyRates } from '../hooks/useCurrencyRates';
-import { parseExchangeText } from '../services/geminiService';
 import { saveRateToBackend } from '../services/apiService';
 import { Modal } from '../components/Modal';
 import { sendAdminTelegram } from '../services/telegramService';
+import { adminLogin, verifyAdminToken, getAdminToken, saveAdminToken, clearAdminToken } from '../services/adminAuthService';
 
-const sampleText = `16-Oct-2025
-
-Bank Transfer
-
-Selling (အရောင်း)
-မြန်မာငွေ10သိန်းအထက် 800
-
-မြန်မာငွေ10သိန်းအောက် 797
-
-100-500အထက်-802/803
-
-Buying (အဝယ်) 820
-
-10သိန်းအထက်817
-
-ငွေဈေးအတက်ကျရှိပါသဖြင့် ငွေလွှဲခါနီးစျေးမေးပေးပါ
-
-အိမ်းလွှဲများအတွက်Kpay/Wave/Bank အကောင့်အစုံ/မှတ်ပုံတင်ထုတ်/Wave passwordထုတ်အကုန်ရပါတယ်`;
+// Form data interface
+interface RateFormData {
+  date: string;
+  paymentMethod: string;
+  sellingBelow1M: string;
+  sellingAbove1M: string;
+  buyingBase: string;
+  buyingAbove1M: string;
+  notes: string;
+}
 
 export const AdminPage: React.FC = () => {
-  const [lastMessage, setLastMessage] = useState<string>(() => {
-    try { return localStorage.getItem('lastExchangeMessage') || ''; } catch { return ''; }
-  });
-  const [text, setText] = useState<string>('');
-  const [authorized, setAuthorized] = useState<boolean>(() => {
-    try { return localStorage.getItem('currex_admin_ok') === '1'; } catch { return false; }
-  });
+  const [authorized, setAuthorized] = useState<boolean>(false);
   const [keyInput, setKeyInput] = useState('');
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const { updateRates, isLoading, error, setError, setIsLoading } = useCurrencyRates();
   const navigate = useNavigate();
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // Form state
+  const [formData, setFormData] = useState<RateFormData>({
+    date: new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).replace(/\s/g, '-'),
+    paymentMethod: 'Bank Transfer',
+    sellingBelow1M: '',
+    sellingAbove1M: '',
+    buyingBase: '',
+    buyingAbove1M: '',
+    notes: 'ငွေဈေးအတက်ကျရှိပါသဖြင့် ငွေလွှဲခါနီးစျေးမေးပေးပါ'
+  });
+
+  // Check for existing admin token on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = getAdminToken();
+      if (token) {
+        setIsVerifying(true);
+        try {
+          const isValid = await verifyAdminToken(token);
+          if (isValid) {
+            setAuthorized(true);
+          } else {
+            clearAdminToken();
+          }
+        } catch {
+          clearAdminToken();
+        } finally {
+          setIsVerifying(false);
+        }
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const handleInputChange = (field: keyof RateFormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) {
-      setError("Textarea cannot be empty.");
+    
+    // Validate required fields
+    if (!formData.sellingBelow1M || !formData.sellingAbove1M || !formData.buyingBase) {
+      setError("Please fill in all required rate fields (Selling <1M, Selling >1M, Buying Base)");
       return;
     }
     
@@ -50,40 +84,52 @@ export const AdminPage: React.FC = () => {
     setError(null);
 
     try {
-      const parsedData = await parseExchangeText(text);
-      
-      // Save to backend first - this is CRITICAL
-      console.log('[Admin] Attempting to save to backend...');
-      const backendSaved = await saveRateToBackend(parsedData);
+      // Convert form data to the expected format
+      const rateData = {
+        date: formData.date,
+        paymentMethod: formData.paymentMethod,
+        sellingRates: {
+          below1M_MMK: parseInt(formData.sellingBelow1M),
+          above1M_MMK: parseInt(formData.sellingAbove1M)
+        },
+        buyingRates: {
+          base: parseInt(formData.buyingBase),
+          above1M_MMK: formData.buyingAbove1M ? parseInt(formData.buyingAbove1M) : undefined
+        },
+        notes: formData.notes ? [formData.notes] : []
+      };
+
+      // Save to backend
+      console.log('[Admin] Attempting to save structured rate data...');
+      const backendSaved = await saveRateToBackend(rateData);
       
       if (!backendSaved) {
-        // Show clear error if backend save fails
-        setError("⚠️ Failed to save to backend database. The rate was saved locally only and will disappear on refresh. Please try again!");
+        setError("⚠️ Failed to save to backend database. Please try again!");
         setIsLoading(false);
-        return; // Don't proceed if backend save fails
+        return;
       }
       
       console.log('[Admin] Backend save successful!');
       
-      // Update local state (this also saves to localStorage)
-      updateRates(parsedData);
+      // Update local state
+      updateRates(rateData);
       
-      try { localStorage.setItem('lastExchangeMessage', text); } catch {}
-      setLastMessage(text);
-      
-      // Best-effort Telegram notification (skip silently if not configured)
-      const date = parsedData.date || new Date().toISOString().slice(0,10);
-      const pm = parsedData.paymentMethod || 'Unknown';
-      const sellBelow = parsedData.sellingRates?.below1M_MMK ?? '-';
-      const sellAbove = parsedData.sellingRates?.above1M_MMK ?? '-';
-      const buyBase = parsedData.buyingRates?.base ?? '-';
-      const buyAbove = parsedData.buyingRates?.above1M_MMK ?? '-';
-      const special = parsedData.sellingRates?.special_100_500 ? `\nSpecial (100-500k+): ${parsedData.sellingRates.special_100_500}` : '';
-      const msg = `CURR EX Rates Updated\nDate: ${date}\nMethod: ${pm}\nSell <1M: ${sellBelow}\nSell >1M: ${sellAbove}\nBuy base: ${buyBase}\nBuy >1M: ${buyAbove}${special}`;
+      // Send Telegram notification
+      const msg = `CURR EX Rates Updated\nDate: ${formData.date}\nMethod: ${formData.paymentMethod}\nSell <1M: ${formData.sellingBelow1M}\nSell >1M: ${formData.sellingAbove1M}\nBuy base: ${formData.buyingBase}${formData.buyingAbove1M ? `\nBuy >1M: ${formData.buyingAbove1M}` : ''}`;
       sendAdminTelegram(msg).catch(() => {});
       
       setShowSuccess(true);
-      setText(''); // Clear the textarea after successful submission
+      
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        sellingBelow1M: '',
+        sellingAbove1M: '',
+        buyingBase: '',
+        buyingAbove1M: '',
+        notes: 'ငွေဈေးအတက်ကျရှိပါသဖြင့် ငွေလွှဲခါနီးစျေးမေးပေးပါ'
+      }));
+      
     } catch (err: any) {
       setError(err.message || "An unknown error occurred.");
     } finally {
@@ -91,16 +137,38 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleKeySubmit = (e: React.FormEvent) => {
+  const handleKeySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (keyInput === 'soehtetlinn1996$') {
-      try { localStorage.setItem('currex_admin_ok', '1'); } catch {}
+    if (!keyInput.trim()) {
+      setKeyError('Password is required');
+      return;
+    }
+
+    setIsVerifying(true);
+    setKeyError(null);
+
+    try {
+      const response = await adminLogin(keyInput);
+      saveAdminToken(response.token);
       setAuthorized(true);
-      setKeyError(null);
-    } else {
-      setKeyError('Invalid key');
+      setKeyInput('');
+    } catch (error: any) {
+      setKeyError(error.message || 'Invalid password');
+    } finally {
+      setIsVerifying(false);
     }
   };
+
+  if (isVerifying) {
+    return (
+      <div className="max-w-md mx-auto bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-accent mx-auto mb-4"></div>
+          <p className="text-brand-text-secondary">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!authorized) {
     return (
@@ -108,17 +176,24 @@ export const AdminPage: React.FC = () => {
         <h1 className="text-2xl font-bold mb-4 text-brand-accent">Admin Access</h1>
         <form onSubmit={handleKeySubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1 text-brand-text-secondary">Enter access key</label>
+            <label className="block text-sm mb-1 text-brand-text-secondary">Enter admin password</label>
             <input
               type="password"
               value={keyInput}
               onChange={(e)=>setKeyInput(e.target.value)}
               className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-              placeholder="Access key"
+              placeholder="Admin password"
+              disabled={isVerifying}
             />
           </div>
           {keyError && <div className="text-sm text-red-300">{keyError}</div>}
-          <button type="submit" className="w-full bg-brand-accent text-slate-900 font-semibold py-3 rounded-xl hover:bg-brand-accent-hover transition">Continue</button>
+          <button 
+            type="submit" 
+            disabled={isVerifying}
+            className="w-full bg-brand-accent text-slate-900 font-semibold py-3 rounded-xl hover:bg-brand-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isVerifying ? 'Verifying...' : 'Login'}
+          </button>
         </form>
       </div>
     );
@@ -126,50 +201,130 @@ export const AdminPage: React.FC = () => {
 
   return (
     <div className="bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
-      <h1 className="text-3xl font-bold mb-2 text-brand-accent">Update Rates</h1>
-      <p className="text-brand-text-secondary mb-8">Paste the daily exchange rate message below to parse and update the application.</p>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="mb-6">
+      <h1 className="text-3xl font-bold mb-2 text-brand-accent">Update Exchange Rates</h1>
+      <p className="text-brand-text-secondary mb-8">Enter the exchange rates manually using the form below.</p>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Date and Payment Method */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Date *</label>
+            <input
+              type="text"
+              value={formData.date}
+              onChange={(e) => handleInputChange('date', e.target.value)}
+              className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              placeholder="e.g., 22-Oct-2025"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Payment Method *</label>
+            <select
+              value={formData.paymentMethod}
+              onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+              className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              required
+            >
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Mobile Wallet">Mobile Wallet</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Selling Rates */}
+        <div className="bg-brand-primary/30 p-4 rounded-xl">
+          <h3 className="text-lg font-semibold mb-4 text-brand-accent">Selling Rates (အရောင်း)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Below 1M MMK *</label>
+              <input
+                type="number"
+                value={formData.sellingBelow1M}
+                onChange={(e) => handleInputChange('sellingBelow1M', e.target.value)}
+                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                placeholder="e.g., 807"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Above 1M MMK *</label>
+              <input
+                type="number"
+                value={formData.sellingAbove1M}
+                onChange={(e) => handleInputChange('sellingAbove1M', e.target.value)}
+                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                placeholder="e.g., 810"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Buying Rates */}
+        <div className="bg-brand-primary/30 p-4 rounded-xl">
+          <h3 className="text-lg font-semibold mb-4 text-brand-accent">Buying Rates (အဝယ်)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Base Rate *</label>
+              <input
+                type="number"
+                value={formData.buyingBase}
+                onChange={(e) => handleInputChange('buyingBase', e.target.value)}
+                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                placeholder="e.g., 830"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Above 1M MMK (Optional)</label>
+              <input
+                type="number"
+                value={formData.buyingAbove1M}
+                onChange={(e) => handleInputChange('buyingAbove1M', e.target.value)}
+                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                placeholder="e.g., 827"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Notes</label>
           <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={15}
-            className="w-full p-4 bg-brand-primary border-2 border-brand-border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent font-mono text-base transition"
-            placeholder={lastMessage || "Paste exchange rate message here..."}
+            value={formData.notes}
+            onChange={(e) => handleInputChange('notes', e.target.value)}
+            className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
+            rows={3}
+            placeholder="Additional notes or information..."
           />
         </div>
 
+        {/* Error Display */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl mb-6 text-base">
-            <strong>Error:</strong> {error}
+          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4">
+            <p className="text-red-300 text-sm">{error}</p>
           </div>
         )}
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-brand-accent text-slate-900 font-bold text-lg py-4 px-4 rounded-xl hover:bg-brand-accent-hover transition-all duration-300 disabled:bg-brand-primary disabled:text-brand-text-secondary disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-cyan-500/50"
+          className="w-full bg-brand-accent text-slate-900 font-semibold py-4 rounded-xl hover:bg-brand-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-3 h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Parsing & Updating...
-            </>
-          ) : (
-            'Update Rates'
-          )}
+          {isLoading ? 'Updating Rates...' : 'Update Exchange Rates'}
         </button>
       </form>
+
+      {/* Success Modal */}
       <Modal
-        title="Success"
         isOpen={showSuccess}
-        onClose={() => { setShowSuccess(false); navigate('/'); }}
+        onClose={() => setShowSuccess(false)}
+        title="Success!"
       >
-        Rates updated successfully!
+        <p>Exchange rates have been updated successfully!</p>
       </Modal>
     </div>
   );

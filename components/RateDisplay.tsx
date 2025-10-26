@@ -37,9 +37,9 @@ export const RateDisplay: React.FC<RateDisplayProps> = ({ rate }) => {
         <RateCard title="You Buy THB (Exchanger Sells)">
           <RateItem label="< 10 Lakh MMK" value={rate.sellingRates.below1M_MMK} />
           <RateItem label="> 10 Lakh MMK" value={rate.sellingRates.above1M_MMK} />
-          {rate.sellingRates.special_100_500 && (
+          {/* {rate.sellingRates.special_100_500 && (
             <RateItem label="Special (100-500k+)" value={rate.sellingRates.special_100_500} />
-          )}
+          )} */}
         </RateCard>
 
         <RateCard title="You Sell THB (Exchanger Buys)">

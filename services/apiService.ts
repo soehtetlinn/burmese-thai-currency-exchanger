@@ -24,6 +24,23 @@ interface BackendExchangeRate {
 
 // Convert backend format to frontend format
 function backendToFrontend(backend: BackendExchangeRate): ExchangeRate {
+  // Failsafe: derive tiers from sourceText if missing
+  const sellingBlock = backend.sourceText.match(/Selling[\s\S]*?(?=Buying|$)/i)?.[0] || '';
+  const buyingBlock = backend.sourceText.match(/Buying[\s\S]*?$/i)?.[0] || '';
+  const sellAboveMatch = sellingBlock.match(/(10\s*သိန်း|၁၀\s*သိန်း)[^\n]*?အထက်[^\d]*(\d{3,4})(?:[\/\-](\d{3,4}))?/);
+  const sellBelowMatch = sellingBlock.match(/(10\s*သိန်း|၁၀\s*သိန်း)[^\n]*?အောက်[^\d]*(\d{3,4})/);
+  const buyBaseMatch = buyingBlock.match(/Buying[^\d]*(\d{3,4})/i);
+  const buyAboveMatch = buyingBlock.match(/(10\s*သိန်း|၁၀\s*သိန်း)[^\n]*?အထက်[^\d]*(\d{3,4})(?:[\/\-](\d{3,4}))?/);
+
+  const derivedSellBelow = sellBelowMatch ? parseInt(sellBelowMatch[2], 10) : undefined;
+  const derivedSellAbove = sellAboveMatch ? parseInt((sellAboveMatch[3] || sellAboveMatch[2]), 10) : undefined;
+  const derivedBuyBase = buyBaseMatch ? parseInt(buyBaseMatch[1], 10) : undefined;
+  const derivedBuyAbove = buyAboveMatch ? parseInt((buyAboveMatch[3] || buyAboveMatch[2]), 10) : undefined;
+
+  const sellBelow1m = (backend.sellBelow1mPer100k ?? derivedSellBelow ?? backend.sellAbove1mPer100k ?? backend.sellRate ?? 0);
+  const sellAbove1m = (backend.sellAbove1mPer100k ?? derivedSellAbove ?? backend.sellBelow1mPer100k ?? backend.sellRate ?? 0);
+  const buyBase = (backend.buyBelow1mPer100k ?? derivedBuyBase ?? backend.buyRate ?? 0);
+  const buyAbove1m = (backend.buyAbove1mPer100k ?? derivedBuyAbove ?? backend.buyRate ?? buyBase);
   // Extract notes from sourceText
   const lines = backend.sourceText.split('\n').map(s => s.trim()).filter(Boolean);
   const notes = lines.slice(-2).filter(line => 
@@ -39,13 +56,13 @@ function backendToFrontend(backend: BackendExchangeRate): ExchangeRate {
     }),
     paymentMethod: backend.paymentMethod || 'Bank Transfer',
     sellingRates: {
-      below1M_MMK: backend.sellBelow1mPer100k || backend.sellRate || 0,
-      above1M_MMK: backend.sellAbove1mPer100k || backend.sellRate || 0,
+      below1M_MMK: sellBelow1m,
+      above1M_MMK: sellAbove1m,
       special_100_500: backend.sellSpecial100to500 || undefined,
     },
     buyingRates: {
-      base: backend.buyBelow1mPer100k || backend.buyRate || 0,
-      above1M_MMK: backend.buyAbove1mPer100k || backend.buyRate || 0,
+      base: buyBase,
+      above1M_MMK: buyAbove1m,
     },
     notes: notes.length > 0 ? notes : [
       'ငွေဈေးအတက်ကျရှိပါသဖြင့် ငွေလွှဲခါနီးစျေးမေးပေးပါ',
@@ -147,25 +164,18 @@ export async function fetchRateHistory(): Promise<ExchangeRate[]> {
   }
 }
 
-export async function saveRateToBackend(data: Omit<ExchangeRate, 'id'>): Promise<boolean> {
+// Save structured rate data to backend
+export async function saveRateToBackend(rateData: any): Promise<boolean> {
   try {
-    const text = frontendToBackend(data);
-    console.log('[API] Saving rate to backend:', text);
+    console.log('[API] Saving structured rate data to backend...');
     
-    const response = await fetch(`${API_BASE_URL}/admin/fx/parse`, {
+    const response = await fetch(`${API_BASE_URL}/currex/admin/rates`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-currex-admin-key': ADMIN_KEY,
       },
-      body: JSON.stringify({
-        text,
-        base: 'THB',
-        quote: 'MMK',
-      }),
+      body: JSON.stringify(rateData),
     });
-
-    console.log('[API] Save response status:', response.status);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'unknown' }));

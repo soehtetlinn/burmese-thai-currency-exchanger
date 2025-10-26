@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Header';
 import { HomePage } from './pages/HomePage';
 import { AdminPage } from './pages/AdminPage';
@@ -10,7 +10,7 @@ import { WebChatWidget } from './components/WebChatWidget';
 const App: React.FC = () => {
   return (
     <CurrencyRatesProvider>
-      <HashRouter>
+      <BrowserRouter>
         <div className="min-h-screen flex flex-col">
           <Header />
           <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
@@ -22,7 +22,7 @@ const App: React.FC = () => {
           </main>
           <WebChatWidget />
         </div>
-      </HashRouter>
+      </BrowserRouter>
     </CurrencyRatesProvider>
   );
 }
