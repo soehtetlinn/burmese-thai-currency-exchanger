@@ -161,10 +161,18 @@ export const AdminPage: React.FC = () => {
 
   if (isVerifying) {
     return (
-      <div className="max-w-md mx-auto bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-accent mx-auto mb-4"></div>
-          <p className="text-brand-text-secondary">Verifying admin access...</p>
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-6">
+            <div className="card glass-card text-center">
+              <div className="card-body">
+                <div className="spinner-border text-accent mb-3" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <p className="text-muted">Verifying admin access...</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -172,151 +180,212 @@ export const AdminPage: React.FC = () => {
 
   if (!authorized) {
     return (
-      <div className="max-w-md mx-auto bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
-        <h1 className="text-2xl font-bold mb-4 text-brand-accent">Admin Access</h1>
-        <form onSubmit={handleKeySubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1 text-brand-text-secondary">Enter admin password</label>
-            <input
-              type="password"
-              value={keyInput}
-              onChange={(e)=>setKeyInput(e.target.value)}
-              className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-              placeholder="Admin password"
-              disabled={isVerifying}
-            />
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="card glass-card">
+              <div className="card-header border-0">
+                <h1 className="text-accent fw-bold fs-3 mb-0">
+                  <i className="bi bi-shield-lock-fill me-2"></i>
+                  Admin Access
+                </h1>
+              </div>
+              <div className="card-body">
+                <form onSubmit={handleKeySubmit}>
+                  <div className="mb-3">
+                    <label className="form-label">Enter admin password</label>
+                    <input
+                      type="password"
+                      value={keyInput}
+                      onChange={(e)=>setKeyInput(e.target.value)}
+                      className="form-control"
+                      placeholder="Admin password"
+                      disabled={isVerifying}
+                    />
+                  </div>
+                  {keyError && (
+                    <div className="alert alert-danger py-2" role="alert">
+                      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                      {keyError}
+                    </div>
+                  )}
+                  <button 
+                    type="submit" 
+                    disabled={isVerifying}
+                    className="btn btn-primary w-100"
+                  >
+                    {isVerifying ? 'Verifying...' : 'Login'}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
-          {keyError && <div className="text-sm text-red-300">{keyError}</div>}
-          <button 
-            type="submit" 
-            disabled={isVerifying}
-            className="w-full bg-brand-accent text-slate-900 font-semibold py-3 rounded-xl hover:bg-brand-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isVerifying ? 'Verifying...' : 'Login'}
-          </button>
-        </form>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
-      <h1 className="text-3xl font-bold mb-2 text-brand-accent">Update Exchange Rates</h1>
-      <p className="text-brand-text-secondary mb-8">Enter the exchange rates manually using the form below.</p>
+    <div className="container">
+      <div className="card glass-card">
+        <div className="card-header border-0">
+          <h1 className="text-accent fw-bold fs-2 mb-2">
+            <i className="bi bi-pencil-square me-2"></i>
+            Update Exchange Rates
+          </h1>
+          <p className="text-muted mb-0">Enter the exchange rates manually using the form below.</p>
+        </div>
+        
+        <div className="card-body">
+          <form onSubmit={handleSubmit}>
+            {/* Date and Payment Method */}
+            <div className="row g-3 mb-4">
+              <div className="col-12 col-md-6">
+                <label className="form-label">
+                  <i className="bi bi-calendar3 me-2"></i>
+                  Date *
+                </label>
+                <input
+                  type="text"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
+                  className="form-control"
+                  placeholder="e.g., 22-Oct-2025"
+                  required
+                />
+              </div>
+              <div className="col-12 col-md-6">
+                <label className="form-label">
+                  <i className="bi bi-credit-card me-2"></i>
+                  Payment Method *
+                </label>
+                <select
+                  value={formData.paymentMethod}
+                  onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                  className="form-select"
+                  required
+                >
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Mobile Wallet">Mobile Wallet</option>
+                </select>
+              </div>
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Date and Payment Method */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Date *</label>
-            <input
-              type="text"
-              value={formData.date}
-              onChange={(e) => handleInputChange('date', e.target.value)}
-              className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-              placeholder="e.g., 22-Oct-2025"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Payment Method *</label>
-            <select
-              value={formData.paymentMethod}
-              onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-              className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-              required
+            {/* Selling Rates */}
+            <div className="card mb-4" style={{ background: 'rgba(34, 211, 238, 0.05)' }}>
+              <div className="card-header border-0 bg-transparent">
+                <h3 className="text-accent fw-bold fs-5 mb-0">
+                  <i className="bi bi-basket2-fill me-2"></i>
+                  Selling Rates (အရောင်း)
+                </h3>
+              </div>
+              <div className="card-body">
+                <div className="row g-3">
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">Below 1M MMK *</label>
+                    <input
+                      type="number"
+                      value={formData.sellingBelow1M}
+                      onChange={(e) => handleInputChange('sellingBelow1M', e.target.value)}
+                      className="form-control"
+                      placeholder="e.g., 807"
+                      required
+                    />
+                  </div>
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">Above 1M MMK *</label>
+                    <input
+                      type="number"
+                      value={formData.sellingAbove1M}
+                      onChange={(e) => handleInputChange('sellingAbove1M', e.target.value)}
+                      className="form-control"
+                      placeholder="e.g., 810"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Buying Rates */}
+            <div className="card mb-4" style={{ background: 'rgba(34, 211, 238, 0.05)' }}>
+              <div className="card-header border-0 bg-transparent">
+                <h3 className="text-accent fw-bold fs-5 mb-0">
+                  <i className="bi bi-wallet2 me-2"></i>
+                  Buying Rates (အဝယ်)
+                </h3>
+              </div>
+              <div className="card-body">
+                <div className="row g-3">
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">Base Rate *</label>
+                    <input
+                      type="number"
+                      value={formData.buyingBase}
+                      onChange={(e) => handleInputChange('buyingBase', e.target.value)}
+                      className="form-control"
+                      placeholder="e.g., 830"
+                      required
+                    />
+                  </div>
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">Above 1M MMK (Optional)</label>
+                    <input
+                      type="number"
+                      value={formData.buyingAbove1M}
+                      onChange={(e) => handleInputChange('buyingAbove1M', e.target.value)}
+                      className="form-control"
+                      placeholder="e.g., 827"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="mb-4">
+              <label className="form-label">
+                <i className="bi bi-sticky me-2"></i>
+                Notes
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                className="form-control"
+                rows={3}
+                placeholder="Additional notes or information..."
+              />
+            </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="alert alert-danger" role="alert">
+                <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn btn-primary w-100 py-3"
             >
-              <option value="Bank Transfer">Bank Transfer</option>
-              <option value="Mobile Wallet">Mobile Wallet</option>
-            </select>
-          </div>
+              {isLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Updating Rates...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle-fill me-2"></i>
+                  Update Exchange Rates
+                </>
+              )}
+            </button>
+          </form>
         </div>
-
-        {/* Selling Rates */}
-        <div className="bg-brand-primary/30 p-4 rounded-xl">
-          <h3 className="text-lg font-semibold mb-4 text-brand-accent">Selling Rates (အရောင်း)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Below 1M MMK *</label>
-              <input
-                type="number"
-                value={formData.sellingBelow1M}
-                onChange={(e) => handleInputChange('sellingBelow1M', e.target.value)}
-                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                placeholder="e.g., 807"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Above 1M MMK *</label>
-              <input
-                type="number"
-                value={formData.sellingAbove1M}
-                onChange={(e) => handleInputChange('sellingAbove1M', e.target.value)}
-                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                placeholder="e.g., 810"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Buying Rates */}
-        <div className="bg-brand-primary/30 p-4 rounded-xl">
-          <h3 className="text-lg font-semibold mb-4 text-brand-accent">Buying Rates (အဝယ်)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Base Rate *</label>
-              <input
-                type="number"
-                value={formData.buyingBase}
-                onChange={(e) => handleInputChange('buyingBase', e.target.value)}
-                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                placeholder="e.g., 830"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Above 1M MMK (Optional)</label>
-              <input
-                type="number"
-                value={formData.buyingAbove1M}
-                onChange={(e) => handleInputChange('buyingAbove1M', e.target.value)}
-                className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                placeholder="e.g., 827"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-brand-text-secondary">Notes</label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => handleInputChange('notes', e.target.value)}
-            className="w-full p-3 bg-brand-primary border-2 border-brand-border rounded-xl text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent"
-            rows={3}
-            placeholder="Additional notes or information..."
-          />
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4">
-            <p className="text-red-300 text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-brand-accent text-slate-900 font-semibold py-4 rounded-xl hover:bg-brand-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Updating Rates...' : 'Update Exchange Rates'}
-        </button>
-      </form>
+      </div>
 
       {/* Success Modal */}
       <Modal

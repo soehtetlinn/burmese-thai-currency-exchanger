@@ -10,19 +10,48 @@ interface ModalProps {
 
 export const Modal: React.FC<ModalProps> = ({ title, children, isOpen, onClose, confirmText = 'OK' }) => {
   if (!isOpen) return null;
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-brand-surface border border-brand-border rounded-2xl shadow-2xl w-[90%] max-w-md p-6">
-        {title && <h3 className="text-xl font-semibold text-brand-accent mb-3">{title}</h3>}
-        <div className="text-brand-text mb-6">{children}</div>
-        <div className="flex justify-end">
-          <button onClick={onClose} className="px-5 py-2 rounded-xl bg-brand-accent text-slate-900 font-semibold hover:bg-brand-accent-hover transition">
-            {confirmText}
-          </button>
+    <>
+      <div 
+        className="modal-backdrop show" 
+        style={{ backdropFilter: 'blur(8px)', background: 'rgba(0, 0, 0, 0.5)' }}
+        onClick={onClose}
+      />
+      <div className="modal show d-block" tabIndex={-1} role="dialog">
+        <div className="modal-dialog modal-dialog-centered" role="document">
+          <div className="modal-content">
+            {title && (
+              <div className="modal-header border-0">
+                <h5 className="modal-title fw-bold text-accent">
+                  <i className="bi bi-check-circle-fill me-2"></i>
+                  {title}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={onClose}
+                  aria-label="Close"
+                />
+              </div>
+            )}
+            <div className="modal-body">
+              {children}
+            </div>
+            <div className="modal-footer border-0">
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={onClose}
+              >
+                <i className="bi bi-check-lg me-2"></i>
+                {confirmText}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

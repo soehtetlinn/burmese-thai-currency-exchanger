@@ -1,6 +1,7 @@
 import { ExchangeRate } from '../types';
+import { authenticatedRequest } from './adminAuthService';
 
-const API_BASE_URL = 'https://www.shltechent.com/api';
+const API_BASE_URL = 'https://api.shltechent.com';
 const ADMIN_KEY = 'currex-admin-123'; // This matches CURREX_ADMIN_KEY in backend .env
 
 // Backend exchange rate response format
@@ -137,12 +138,8 @@ export async function fetchLatestRate(): Promise<ExchangeRate | null> {
 export async function fetchRateHistory(): Promise<ExchangeRate[]> {
   try {
     console.log('[API] Fetching rate history from:', `${API_BASE_URL}/admin/fx`);
-    const response = await fetch(`${API_BASE_URL}/admin/fx`, {
+    const response = await authenticatedRequest(`${API_BASE_URL}/admin/fx`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-currex-admin-key': ADMIN_KEY,
-      },
     });
 
     console.log('[API] History response status:', response.status);
@@ -169,11 +166,8 @@ export async function saveRateToBackend(rateData: any): Promise<boolean> {
   try {
     console.log('[API] Saving structured rate data to backend...');
     
-    const response = await fetch(`${API_BASE_URL}/currex/admin/rates`, {
+    const response = await authenticatedRequest(`${API_BASE_URL}/currex/admin/rates`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(rateData),
     });
 

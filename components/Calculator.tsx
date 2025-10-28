@@ -76,50 +76,99 @@ export const Calculator: React.FC<CalculatorProps> = ({ rate }) => {
   }, [direction, amount, conversionResult, parsedAmount]);
   
   return (
-    <div className="w-full bg-brand-surface backdrop-blur-sm border border-brand-border rounded-2xl shadow-lg p-6 sm:p-8">
-      <h2 className="text-3xl font-bold mb-6">Currency Converter</h2>
-      <div className="relative flex flex-col items-center gap-2">
-        {/* From Amount */}
-        <div className="w-full">
-          <label htmlFor="fromAmount" className="block text-lg font-medium text-brand-text-secondary mb-2">You Send</label>
-          <div className="relative">
-            <input
-              id="fromAmount"
-              type="text"
-              value={fromValue}
-              onChange={handleAmountChange}
-              className="w-full bg-brand-primary border-2 border-brand-border rounded-xl shadow-sm py-4 px-6 text-4xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent transition"
-              placeholder="0"
-            />
-            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-2xl font-semibold text-brand-text-secondary">{fromCurrency}</span>
+    <div className="card glass-card">
+      <div className="card-header border-0 d-flex align-items-center gap-3">
+        <i className="bi bi-calculator-fill text-accent fs-3"></i>
+        <h2 className="mb-0 fw-bold fs-2">Currency Converter</h2>
+      </div>
+      <div className="card-body">
+        <div className="row g-4">
+          {/* From Amount */}
+          <div className="col-12">
+            <label htmlFor="fromAmount" className="form-label">
+              <i className="bi bi-send-fill me-2"></i>
+              You Send
+            </label>
+            <div className="position-relative">
+              <input
+                id="fromAmount"
+                type="text"
+                value={fromValue}
+                onChange={handleAmountChange}
+                className="form-control form-control-lg"
+                style={{ 
+                  fontSize: '2.5rem', 
+                  fontFamily: 'monospace', 
+                  paddingRight: '5rem',
+                  height: '80px'
+                }}
+                placeholder="0"
+              />
+              <span 
+                className="position-absolute top-50 end-0 translate-middle-y me-4 fs-3 fw-bold badge bg-secondary"
+                style={{ fontSize: '1.5rem !important' }}
+              >
+                {fromCurrency}
+              </span>
+            </div>
+          </div>
+          
+          {/* Swap Button */}
+          <div className="col-12 text-center py-2">
+            <button 
+              onClick={toggleDirection} 
+              className="btn btn-lg rounded-circle p-3 float-animation"
+              style={{ 
+                width: '70px', 
+                height: '70px',
+                background: 'var(--brand-surface)',
+                border: '2px solid var(--brand-border)'
+              }}
+              title="Swap currencies"
+            >
+              <i className="bi bi-arrow-down-up fs-2 text-accent"></i>
+            </button>
+          </div>
+
+          {/* To Amount */}
+          <div className="col-12">
+            <label htmlFor="toAmount" className="form-label">
+              <i className="bi bi-cash-coin me-2"></i>
+              They Receive
+            </label>
+            <div className="position-relative">
+              <div
+                id="toAmount"
+                className="form-control form-control-lg text-accent fw-bold"
+                style={{ 
+                  fontSize: '2.5rem', 
+                  fontFamily: 'monospace',
+                  paddingRight: '5rem',
+                  height: '80px',
+                  background: 'var(--brand-bg-start)',
+                  border: '2px solid var(--brand-primary)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                {toValue}
+              </div>
+              <span 
+                className="position-absolute top-50 end-0 translate-middle-y me-4 fs-3 fw-bold badge bg-secondary"
+                style={{ fontSize: '1.5rem !important' }}
+              >
+                {toCurrency}
+              </span>
+            </div>
           </div>
         </div>
         
-        {/* Swap Button */}
-        <div className="w-full flex justify-center py-2">
-            <button onClick={toggleDirection} className="p-4 bg-brand-surface border-2 border-brand-border rounded-full hover:bg-brand-accent hover:text-slate-900 transition-all duration-300 transform hover:rotate-180 hover:scale-110 shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 12l-4-4m4 4l4-4m6 8v-12m0 12l-4-4m4 4l4-4" />
-                </svg>
-            </button>
+        <div className="alert alert-info mt-4 mb-0 text-center" role="alert">
+          <i className="bi bi-info-circle-fill me-2"></i>
+          <strong>Applicable Rate:</strong> 
+          <span className="fs-5 fw-bold text-accent mx-2">{conversionResult.rateUsed}</span> 
+          THB / 100k MMK
         </div>
-
-        {/* To Amount */}
-        <div className="w-full">
-          <label htmlFor="toAmount" className="block text-lg font-medium text-brand-text-secondary mb-2">They Receive</label>
-          <div className="relative">
-            <div
-              id="toAmount"
-              className="w-full bg-brand-bg-start border-2 border-brand-primary rounded-xl shadow-inner py-4 px-6 text-4xl font-mono text-brand-accent"
-            >
-              {toValue}
-            </div>
-            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-2xl font-semibold text-brand-text-secondary">{toCurrency}</span>
-          </div>
-        </div>
-      </div>
-      <div className="text-center mt-6 text-base text-brand-text-secondary">
-        <p>Applicable Rate: <span className="font-bold text-brand-text">{conversionResult.rateUsed}</span> THB / 100k MMK</p>
       </div>
     </div>
   );

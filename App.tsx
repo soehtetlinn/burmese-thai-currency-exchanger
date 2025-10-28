@@ -6,24 +6,29 @@ import { AdminPage } from './pages/AdminPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { CurrencyRatesProvider } from './hooks/useCurrencyRates';
 import { WebChatWidget } from './components/WebChatWidget';
+import { ThemeProvider } from './hooks/useTheme';
 
 const App: React.FC = () => {
   return (
-    <CurrencyRatesProvider>
-      <BrowserRouter>
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/history" element={<HistoryPage />} />
-              <Route path="/admin" element={<AdminPage />} />
-            </Routes>
-          </main>
-          <WebChatWidget />
-        </div>
-      </BrowserRouter>
-    </CurrencyRatesProvider>
+    <ThemeProvider>
+      <CurrencyRatesProvider>
+        <BrowserRouter>
+          <div className="min-vh-100 d-flex flex-column">
+            <Header />
+            <main className="flex-grow-1 py-4 py-md-5">
+              <div className="container" style={{ maxWidth: '1200px' }}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/history" element={<HistoryPage />} />
+                  <Route path="/admin" element={<AdminPage />} />
+                </Routes>
+              </div>
+            </main>
+            <WebChatWidget />
+          </div>
+        </BrowserRouter>
+      </CurrencyRatesProvider>
+    </ThemeProvider>
   );
 }
 

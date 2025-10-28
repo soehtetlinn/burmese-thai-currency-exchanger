@@ -65,40 +65,84 @@ export const WebChatWidget: React.FC = () => {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 rounded-full shadow-lg bg-brand-accent text-slate-900 w-14 h-14 flex items-center justify-center hover:bg-brand-accent-hover"
+          className="btn btn-primary rounded-circle position-fixed bottom-0 end-0 m-4 float-animation"
+          style={{ 
+            width: '60px', 
+            height: '60px', 
+            zIndex: 1050,
+            boxShadow: '0 8px 25px rgba(34, 211, 238, 0.5)'
+          }}
           aria-label="Open chat"
           title="Chat with us"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M2 5a3 3 0 013-3h14a3 3 0 013 3v9a3 3 0 01-3 3H8l-5 5V5z"/></svg>
+          <i className="bi bi-chat-dots-fill fs-4"></i>
         </button>
       )}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 max-w-[90vw] bg-brand-surface border border-brand-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-          <div className="px-4 py-3 bg-brand-primary flex items-center justify-between">
-            <div className="font-semibold">Chat with us</div>
-            <button onClick={() => setOpen(false)} className="text-brand-text-secondary hover:text-brand-text">✕</button>
+        <div 
+          className="card position-fixed bottom-0 end-0 m-4 shadow-lg" 
+          style={{ 
+            width: '350px', 
+            maxWidth: '90vw', 
+            height: '500px',
+            zIndex: 1050 
+          }}
+        >
+          <div className="card-header d-flex justify-content-between align-items-center bg-primary">
+            <div className="d-flex align-items-center gap-2">
+              <i className="bi bi-chat-dots-fill"></i>
+              <span className="fw-semibold">Chat with us</span>
+            </div>
+            <button 
+              onClick={() => setOpen(false)} 
+              className="btn-close btn-close-white"
+              aria-label="Close"
+            />
           </div>
-          <div className="p-3 h-80 overflow-y-auto space-y-2">
+          <div className="card-body overflow-auto" style={{ height: 'calc(100% - 130px)' }}>
             {messages.length === 0 && (
-              <div className="text-sm text-brand-text-secondary">Ask us anything about rates or transfers.</div>
+              <div className="alert alert-info small">
+                <i className="bi bi-info-circle me-2"></i>
+                Ask us anything about rates or transfers.
+              </div>
             )}
             {messages.map(m => (
-              <div key={m.id} className={m.author === 'client' ? 'text-right' : 'text-left'}>
-                <div className={(m.author === 'client' ? 'bg-brand-accent text-slate-900' : 'bg-brand-primary text-brand-text') + ' inline-block px-3 py-2 rounded-xl max-w-[85%]'}>
+              <div key={m.id} className={`mb-2 ${m.author === 'client' ? 'text-end' : 'text-start'}`}>
+                <div 
+                  className={`d-inline-block px-3 py-2 rounded-3 ${
+                    m.author === 'client' 
+                      ? 'bg-primary text-dark' 
+                      : 'text-white'
+                  }`}
+                  style={{ 
+                    maxWidth: '85%',
+                    background: m.author === 'client' ? undefined : 'var(--brand-primary)'
+                  }}
+                >
                   {m.text}
                 </div>
               </div>
             ))}
           </div>
-          <div className="p-3 border-t border-brand-border flex gap-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
-              className="flex-1 bg-brand-primary border-2 border-brand-border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent"
-              placeholder="Type a message..."
-            />
-            <button onClick={handleSend} disabled={loading || !input.trim()} className="px-4 py-2 rounded-xl bg-brand-accent text-slate-900 font-semibold disabled:opacity-60">Send</button>
+          <div className="card-footer">
+            <div className="input-group">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
+                className="form-control"
+                placeholder="Type a message..."
+                style={{ borderRadius: '1rem 0 0 1rem' }}
+              />
+              <button 
+                onClick={handleSend} 
+                disabled={loading || !input.trim()} 
+                className="btn btn-primary"
+                style={{ borderRadius: '0 1rem 1rem 0' }}
+              >
+                <i className="bi bi-send-fill"></i>
+              </button>
+            </div>
           </div>
         </div>
       )}
